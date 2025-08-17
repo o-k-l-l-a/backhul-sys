@@ -1,0 +1,12 @@
+[Unit]
+Description=Backhaul Iran Port 70 (Iran)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/root/backhaul-core/backhaul_premium -c /root/backhaul-core/iran70.toml
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
