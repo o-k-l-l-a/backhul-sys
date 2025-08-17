@@ -1,0 +1,27 @@
+[server]
+bind_addr = ":75"
+transport = "uwsmux"
+accept_udp = false
+token = "Bardiawin87"
+keepalive_period = 75
+nodelay = true
+channel_size = 2048
+heartbeat = 40
+mux_con = 8
+mux_version = 2
+mux_framesize = 32768
+mux_recievebuffer = 4194304
+mux_streambuffer = 2000000
+sniffer = false
+web_port = 0
+sniffer_log = "/root/log.json"
+log_level = "info"
+proxy_protocol= false
+tun_name = "backhaul"
+tun_subnet = "10.10.10.0/24"
+mtu = 1500
+
+ports = [
+    "4040",
+    "4041",
+]
