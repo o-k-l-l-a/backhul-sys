@@ -3,15 +3,13 @@ set -e
 
 echo "📦 شروع نصب backhaul..."
 
-# --- بخش اول: دانلود فایل‌های backhaul-core ---
+# --- بخش اول: آماده‌سازی مسیر ---
 mkdir -p /root/backhaul-core
 cd /root/backhaul-core
 
 BASE_URL_CORE="https://raw.githubusercontent.com/o-k-l-l-a/backhul-sys/refs/heads/main/backhaul-core"
 
 FILES_CORE=(
-    "backhaul_premium"
-    "iran100.toml"
     "iran55.toml"
     "iran60.toml"
     "iran70.toml"
@@ -20,15 +18,34 @@ FILES_CORE=(
     "iran85.toml"
     "iran90.toml"
     "iran95.toml"
+    "iran100.toml"
 )
 
+# --- دانلود backhaul_premium اگر وجود نداشت ---
+if [ ! -f "/root/backhaul-core/backhaul_premium" ]; then
+    echo "⬇️ تلاش برای دانلود backhaul_premium ..."
+    if curl -s -O "$BASE_URL_CORE/backhaul_premium"; then
+        chmod +x backhaul_premium
+        echo "✅ backhaul_premium دانلود شد."
+    else
+        echo "⚠️ دانلود backhaul_premium ناموفق بود، از نسخه موجود استفاده می‌شود (اگر وجود داشته باشد)."
+        if [ ! -f "/root/backhaul-core/backhaul_premium" ]; then
+            echo "❌ هیچ نسخه‌ای از backhaul_premium پیدا نشد. لطفاً فایل را دستی قرار دهید."
+            exit 1
+        fi
+    fi
+else
+    echo "ℹ️ backhaul_premium از قبل وجود دارد، دانلود نمی‌شود."
+    chmod +x backhaul_premium
+fi
+
+# --- دانلود فایل‌های کانفیگ ---
 echo "⬇️ دانلود فایل‌های core..."
 for file in "${FILES_CORE[@]}"; do
     echo "دانلود $file ..."
-    curl -s -O "$BASE_URL_CORE/$file"
+    curl -s -O "$BASE_URL_CORE/$file" || echo "⚠️ دانلود $file ناموفق بود"
 done
 
-chmod +x backhaul_premium
 cd /root
 
 # --- بخش دوم: دانلود فایل‌های systemd service ---
@@ -49,7 +66,7 @@ FILES_SYSTEMD=(
 echo "⬇️ دانلود فایل‌های systemd ..."
 for file in "${FILES_SYSTEMD[@]}"; do
     echo "دانلود $file به /etc/systemd/system ..."
-    sudo curl -s -o "/etc/systemd/system/$file" "$BASE_URL_SYSTEMD/$file"
+    curl -s -o "/etc/systemd/system/$file" "$BASE_URL_SYSTEMD/$file" || echo "⚠️ دانلود سرویس $file ناموفق بود"
 done
 
 # --- رفرش systemd ---
