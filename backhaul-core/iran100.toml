@@ -2,7 +2,7 @@
 bind_addr = ":100"
 transport = "uwsmux"
 accept_udp = false
-token = "okilauae"
+token = "okila82"
 keepalive_period = 75
 nodelay = true
 channel_size = 2048
