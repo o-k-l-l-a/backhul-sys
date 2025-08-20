@@ -1,87 +1,92 @@
 #!/bin/bash
 set -e
 
-echo "📦 شروع نصب backhaul..."
-
-# --- بخش اول: آماده‌سازی مسیر ---
-mkdir -p /root/backhaul-core
-cd /root/backhaul-core
-
+SERVICES=(55 60 70 75 80 85 90 95 100)
 BASE_URL_CORE="https://raw.githubusercontent.com/o-k-l-l-a/backhul-sys/refs/heads/main/backhaul-core"
-
-FILES_CORE=(
-    "iran55.toml"
-    "iran60.toml"
-    "iran70.toml"
-    "iran75.toml"
-    "iran80.toml"
-    "iran85.toml"
-    "iran90.toml"
-    "iran95.toml"
-    "iran100.toml"
-)
-
-# --- دانلود backhaul_premium اگر وجود نداشت ---
-if [ ! -f "/root/backhaul-core/backhaul_premium" ]; then
-    echo "⬇️ تلاش برای دانلود backhaul_premium ..."
-    if curl -fsSL -o backhaul_premium "$BASE_URL_CORE/backhaul_premium"; then
-        chmod +x backhaul_premium
-        echo "✅ backhaul_premium دانلود شد."
-    else
-        echo "❌ دانلود backhaul_premium ناموفق بود. لطفاً فایل را دستی قرار دهید."
-        exit 1
-    fi
-else
-    echo "ℹ️ backhaul_premium از قبل وجود دارد، دانلود نمی‌شود."
-    chmod +x backhaul_premium
-fi
-
-# --- دانلود فایل‌های کانفیگ ---
-echo "⬇️ دانلود فایل‌های core..."
-for file in "${FILES_CORE[@]}"; do
-    echo "دانلود $file ..."
-    if ! curl -fsSL -o "$file" "$BASE_URL_CORE/$file"; then
-        echo "⚠️ دانلود $file ناموفق بود"
-    fi
-done
-
-cd /root
-
-# --- بخش دوم: دانلود فایل‌های systemd service ---
 BASE_URL_SYSTEMD="https://raw.githubusercontent.com/o-k-l-l-a/backhul-sys/refs/heads/main/etc/systemd/system"
 
-FILES_SYSTEMD=(
-    "backhaul-iran55.service"
-    "backhaul-iran60.service"
-    "backhaul-iran70.service"
-    "backhaul-iran75.service"
-    "backhaul-iran80.service"
-    "backhaul-iran85.service"
-    "backhaul-iran90.service"
-    "backhaul-iran95.service"
-    "backhaul-iran100.service"
-)
+function uninstall_backhaul() {
+    echo "🛑 توقف و حذف سرویس‌ها..."
+    for svc in "${SERVICES[@]}"; do
+        systemctl stop backhaul-iran${svc}.service || true
+        systemctl disable backhaul-iran${svc}.service || true
+        rm -f /etc/systemd/system/backhaul-iran${svc}.service
+    done
+    systemctl daemon-reload
+    systemctl reset-failed
 
-echo "⬇️ دانلود فایل‌های systemd ..."
-for file in "${FILES_SYSTEMD[@]}"; do
-    echo "دانلود $file به /etc/systemd/system ..."
-    if ! curl -fsSL -o "/etc/systemd/system/$file" "$BASE_URL_SYSTEMD/$file"; then
-        echo "⚠️ دانلود سرویس $file ناموفق بود"
+    echo "🗑 حذف فایل‌های core..."
+    rm -rf /root/backhaul-core
+    echo "✅ حذف کامل شد."
+}
+
+function install_backhaul() {
+    echo "📦 شروع نصب backhaul..."
+    mkdir -p /root/backhaul-core
+    cd /root/backhaul-core
+
+    # دانلود باینری
+    if [ ! -f "backhaul_premium" ]; then
+        echo "⬇️ دانلود backhaul_premium ..."
+        curl -fsSL -o backhaul_premium "$BASE_URL_CORE/backhaul_premium"
+        chmod +x backhaul_premium
     fi
-done
 
-# --- رفرش systemd ---
-echo "🔄 ریفرش systemd ..."
-systemctl daemon-reload
+    # دانلود کانفیگ‌ها
+    for svc in "${SERVICES[@]}"; do
+        echo "⬇️ دانلود iran${svc}.toml ..."
+        curl -fsSL -o iran${svc}.toml "$BASE_URL_CORE/iran${svc}.toml" || echo "⚠️ دانلود iran${svc}.toml ناموفق بود"
+    done
 
-# --- فعال‌سازی و اجرای سرویس‌ها ---
-echo "🚀 فعال‌سازی سرویس‌ها..."
-for svc in 55 60 70 75 80 85 90 95 100; do
-    systemctl enable backhaul-iran${svc}.service --now
-done
+    cd /root
 
-# --- نمایش وضعیت ---
-echo "📋 وضعیت سرویس‌ها:"
-systemctl --no-pager --full -l status backhaul-iran*.service | grep -E "●|Active|Main PID|failed"
+    # دانلود فایل‌های systemd
+    for svc in "${SERVICES[@]}"; do
+        echo "⬇️ دانلود backhaul-iran${svc}.service ..."
+        curl -fsSL -o "/etc/systemd/system/backhaul-iran${svc}.service" "$BASE_URL_SYSTEMD/backhaul-iran${svc}.service" || echo "⚠️ دانلود سرویس ${svc} ناموفق بود"
+    done
 
-echo "✅ نصب کامل شد و همه سرویس‌ها فعال شدند."
+    # ریفرش systemd
+    systemctl daemon-reload
+
+    # فعال‌سازی
+    for svc in "${SERVICES[@]}"; do
+        systemctl enable backhaul-iran${svc}.service --now
+    done
+
+    echo "✅ نصب کامل شد."
+    systemctl --no-pager --full -l status backhaul-iran*.service | grep -E "●|Active|failed"
+}
+
+function close_ports() {
+    echo "🔒 بستن پورت‌های سرویس‌ها..."
+    for svc in "${SERVICES[@]}"; do
+        ufw deny ${svc} || true
+    done
+    ufw reload
+    echo "✅ همه پورت‌ها بسته شدند."
+}
+
+function open_ports() {
+    echo "🔓 باز کردن پورت‌های سرویس‌ها..."
+    for svc in "${SERVICES[@]}"; do
+        ufw allow ${svc} || true
+    done
+    ufw reload
+    echo "✅ همه پورت‌ها باز شدند."
+}
+
+echo "=== مدیریت Backhaul Iran ==="
+echo "1) Uninstall (حذف کامل)"
+echo "2) Install (نصب مجدد)"
+echo "3) Close Ports (بستن همه پورت‌ها)"
+echo "4) Open Ports (باز کردن همه پورت‌ها)"
+read -p "انتخاب شما: " choice
+
+case $choice in
+    1) uninstall_backhaul ;;
+    2) install_backhaul ;;
+    3) close_ports ;;
+    4) open_ports ;;
+    *) echo "❌ انتخاب نامعتبر" ;;
+esac
