@@ -24,15 +24,12 @@ FILES_CORE=(
 # --- دانلود backhaul_premium اگر وجود نداشت ---
 if [ ! -f "/root/backhaul-core/backhaul_premium" ]; then
     echo "⬇️ تلاش برای دانلود backhaul_premium ..."
-    if curl -s -O "$BASE_URL_CORE/backhaul_premium"; then
+    if curl -fsSL -o backhaul_premium "$BASE_URL_CORE/backhaul_premium"; then
         chmod +x backhaul_premium
         echo "✅ backhaul_premium دانلود شد."
     else
-        echo "⚠️ دانلود backhaul_premium ناموفق بود، از نسخه موجود استفاده می‌شود (اگر وجود داشته باشد)."
-        if [ ! -f "/root/backhaul-core/backhaul_premium" ]; then
-            echo "❌ هیچ نسخه‌ای از backhaul_premium پیدا نشد. لطفاً فایل را دستی قرار دهید."
-            exit 1
-        fi
+        echo "❌ دانلود backhaul_premium ناموفق بود. لطفاً فایل را دستی قرار دهید."
+        exit 1
     fi
 else
     echo "ℹ️ backhaul_premium از قبل وجود دارد، دانلود نمی‌شود."
@@ -43,7 +40,9 @@ fi
 echo "⬇️ دانلود فایل‌های core..."
 for file in "${FILES_CORE[@]}"; do
     echo "دانلود $file ..."
-    curl -s -O "$BASE_URL_CORE/$file" || echo "⚠️ دانلود $file ناموفق بود"
+    if ! curl -fsSL -o "$file" "$BASE_URL_CORE/$file"; then
+        echo "⚠️ دانلود $file ناموفق بود"
+    fi
 done
 
 cd /root
@@ -66,29 +65,23 @@ FILES_SYSTEMD=(
 echo "⬇️ دانلود فایل‌های systemd ..."
 for file in "${FILES_SYSTEMD[@]}"; do
     echo "دانلود $file به /etc/systemd/system ..."
-    curl -s -o "/etc/systemd/system/$file" "$BASE_URL_SYSTEMD/$file" || echo "⚠️ دانلود سرویس $file ناموفق بود"
+    if ! curl -fsSL -o "/etc/systemd/system/$file" "$BASE_URL_SYSTEMD/$file"; then
+        echo "⚠️ دانلود سرویس $file ناموفق بود"
+    fi
 done
 
 # --- رفرش systemd ---
 echo "🔄 ریفرش systemd ..."
-sudo systemctl daemon-reload
+systemctl daemon-reload
 
 # --- فعال‌سازی و اجرای سرویس‌ها ---
 echo "🚀 فعال‌سازی سرویس‌ها..."
 for svc in 55 60 70 75 80 85 90 95 100; do
-    sudo systemctl enable backhaul-iran${svc}.service --now
+    systemctl enable backhaul-iran${svc}.service --now
 done
 
-# --- اجرای مستقیم backhaul_premium با کانفیگ‌ها ---
-echo "▶️ اجرای مستقیم backhaul_premium با کانفیگ‌ها..."
-for svc in 55 60 70 75 80 85 90 95 100; do
-    /root/backhaul-core/backhaul_premium -c /root/backhaul-core/iran${svc}.toml &
-done
+# --- نمایش وضعیت ---
+echo "📋 وضعیت سرویس‌ها:"
+systemctl --no-pager --full -l status backhaul-iran*.service | grep -E "●|Active|Main PID|failed"
 
-# --- ریستارت نهایی سرویس‌ها ---
-echo "♻️ ریستارت نهایی همه سرویس‌ها..."
-for svc in 55 60 70 75 80 85 90 95 100; do
-    sudo systemctl restart backhaul-iran${svc}.service
-done
-
-echo "✅ نصب کامل شد و همه سرویس‌ها ریستارت شدند."
+echo "✅ نصب کامل شد و همه سرویس‌ها فعال شدند."
