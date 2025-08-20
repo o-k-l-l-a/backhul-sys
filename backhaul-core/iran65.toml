@@ -1,5 +1,5 @@
 [server]
-bind_addr = ":60"
+bind_addr = ":65"
 transport = "uwsmux"
 accept_udp = false
 token = "okila82"
