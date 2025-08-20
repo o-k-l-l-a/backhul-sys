@@ -2,7 +2,7 @@
 bind_addr = ":90"
 transport = "uwsmux"
 accept_udp = false
-token = "Bardiawin87"
+token = "okila82"
 keepalive_period = 75
 nodelay = true
 channel_size = 2048
