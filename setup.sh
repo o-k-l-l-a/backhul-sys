@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-SERVICES=(55 60 70 75 80 85 90 95 100)
+SERVICES=(55 60 65 70 75 80 85 90 95 100)
 BASE_URL_CORE="https://raw.githubusercontent.com/o-k-l-l-a/backhul-sys/refs/heads/main/backhaul-core"
 BASE_URL_SYSTEMD="https://raw.githubusercontent.com/o-k-l-l-a/backhul-sys/refs/heads/main/etc/systemd/system"
 
